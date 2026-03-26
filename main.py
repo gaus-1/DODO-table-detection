@@ -125,11 +125,11 @@ class AnalyticsEngine:
 class VideoProcessor:
     """Оркестратор обработки видеопотока."""
 
-    def __init__(self, video_path: str, output_path: str = "output.mp4"):
+    def __init__(self, video_path: str, output_path: str, detector: ObjectDetector, analytics: AnalyticsEngine):
         self.video_path = video_path
         self.output_path = output_path
-        self.detector = ObjectDetector()
-        self.analytics = AnalyticsEngine()
+        self.detector = detector
+        self.analytics = analytics
 
     def run(self) -> None:
         """Запуск цикла чтения, детекции и записи."""
@@ -209,5 +209,13 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, default="output.mp4", help="Путь к сохраняемому видео")
     args = parser.parse_args()
 
-    processor = VideoProcessor(video_path=args.video, output_path=args.output)
+    detector_instance = ObjectDetector()
+    analytics_instance = AnalyticsEngine()
+    
+    processor = VideoProcessor(
+        video_path=args.video, 
+        output_path=args.output, 
+        detector=detector_instance, 
+        analytics=analytics_instance
+    )
     processor.run()
