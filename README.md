@@ -11,8 +11,10 @@
 
 ## Инструкция по запуску
 
-1. Установка окружения:
+1. Клонирование репозитория и установка окружения:
    ```bash
+   git clone https://github.com/gaus-1/DODO-table-detection.git
+   cd DODO-table-detection
    python -m venv venv
    # macOS/Linux: source venv/bin/activate
    # Windows: venv\Scripts\activate
@@ -21,10 +23,15 @@
 
 2. Запуск пайплайна:
    ```bash
-   python main.py --video "video1.mp4" --output "output.mp4"
+   python main.py --video "твоё_видео.mp4" --output "output.mp4"
    ```
 
-3. **Интерактивный этап:** При старте откроется первый кадр видео. Выделите целевой стол (ROI) левой кнопкой мыши. Нажмите `ENTER` или `SPACE` для подтверждения.
+3. Запуск Unit-тестов (проверка логики `TableTracker`):
+   ```bash
+   pytest -v tests/
+   ```
+
+4. **Интерактивный этап:** При старте пайплайна откроется первый кадр видео. Выделите целевой стол (ROI) левой кнопкой мыши. Нажмите `ENTER` или `SPACE` для подтверждения.
 
 ## Детали реализации
 
