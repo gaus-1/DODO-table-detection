@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 from typing import Any, Dict, List, Tuple
 
 import cv2
@@ -133,6 +134,10 @@ class VideoProcessor:
 
     def run(self) -> None:
         """Запуск цикла чтения, детекции и записи."""
+        if not os.path.isfile(self.video_path):
+            logging.error("[Security] Файл видео не найден или недопустмый путь: %s", self.video_path)
+            return
+            
         cap = cv2.VideoCapture(self.video_path)
         if not cap.isOpened():
             logging.error("Не удалось открыть видео: %s", self.video_path)
@@ -160,15 +165,22 @@ class VideoProcessor:
             return
 
         roi_coords = (x, y, x + w, y + h)
-        tracker = TableTracker(roi=roi_coords, fps=fps, debounce_seconds=2.0)
+        
+        # ОПТИМИЗАЦИЯ ПЕРФОРМАНСА: YOLO на CPU работает очень медленно на 30+ fps.
+        # Для детекции стола достаточно делать ~5 проверок в секунду.
+        # Это ускоряет скрипт в 6-7 раз, не ломая debounce-логику.
+        process_interval = max(1, int(fps / 5))
+        effective_fps = fps / process_interval
+        tracker = TableTracker(roi=roi_coords, fps=effective_fps, debounce_seconds=2.0)
 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(self.output_path, fourcc, fps, (width, height))
 
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         frame_idx = 0
+        current_state = TableTracker.STATE_EMPTY
 
-        logging.info("Начинаем обработку кадров...")
+        logging.info("Гонка видео начата (оптимизировано, детекция каждые %d кадра, 5/sec)...", process_interval)
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -177,12 +189,15 @@ class VideoProcessor:
             frame_idx += 1
             timestamp_sec = frame_idx / fps
 
-            people_boxes = self.detector.detect_people(frame)
-            current_state, state_changed = tracker.process_frame(people_boxes)
+            # 1. Тяжелая детекция вызывается только на каждый N-й кадр
+            if frame_idx % process_interval == 0 or frame_idx == 1:
+                people_boxes = self.detector.detect_people(frame)
+                current_state, state_changed = tracker.process_frame(people_boxes)
 
-            if state_changed:
-                self.analytics.log_event(current_state, timestamp_sec)
+                if state_changed:
+                    self.analytics.log_event(current_state, timestamp_sec)
 
+            # 2. Отрисовка происходит ПЛАВНО на СТАРЫХ КОРДИНАТАХ каждый кадр (сохраняем вид!)
             roi_color = (0, 255, 0) if current_state == TableTracker.STATE_EMPTY else (0, 0, 255)
             rx1, ry1, rx2, ry2 = roi_coords
             cv2.rectangle(frame, (rx1, ry1), (rx2, ry2), roi_color, 3)
