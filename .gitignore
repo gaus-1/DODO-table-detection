@@ -1,0 +1,20 @@
+# Секреты
+.env
+.env.*
+!.env.example
+
+# Стандартное
+__pycache__/
+*.pyc
+venv/
+.venv/
+env/
+.env/
+
+# Редакторы
+.vscode/
+.idea/
+
+# Данные проекта
+*.mp4
+*.pt
